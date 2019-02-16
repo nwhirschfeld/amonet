@@ -9,11 +9,11 @@ struct device_t {
     size_t (*write)(struct device_t *dev, void *src, uint64_t block_off, size_t size, uint32_t part);
 };
 
-struct device_t* (*get_device)() = (void*)0x81E354F1;
-void (*cache_clean)(void *addr, size_t sz) = (void*)0x81E3BCD0;
-size_t (*video_printf)(const char *format, ...) = (void *)0x81E42289;
+struct device_t* (*get_device)() = (void*)0x81E35CF1;
+void (*cache_clean)(void *addr, size_t sz) = (void*)0x81E3CB70;
+size_t (*video_printf)(const char *format, ...) = (void *)0x81E47189;
 
-uint32_t* g_boot_mode = (uint32_t*) 0x81E6D370;
+uint32_t* g_boot_mode = (uint32_t*) 0x81E81374;
 
 #define PAYLOAD_DST 0x81000000
 #define PAYLOAD_SRC 0x200000
