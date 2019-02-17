@@ -178,6 +178,8 @@ int main() {
     // Force uart enable
     char* disable_uart = (char*)0x81E6937C;
     strcpy(disable_uart, "printk.disable_uart=0");
+    disable_uart = (char*)0x81E68960;
+    strcpy(disable_uart, " printk.disable_uart=0");
 
     uint32_t *patch32;
 
